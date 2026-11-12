@@ -22,6 +22,12 @@ private:
     Insets margins_;
     std::vector<Item> items_;
 };
-using VBoxLayout = BoxLayout;
-using HBoxLayout = BoxLayout;
+class VBoxLayout : public BoxLayout {
+public:
+    explicit VBoxLayout(int spacing = 0, Insets margins = {}) : BoxLayout(Direction::Vertical,spacing,margins) {}
+};
+class HBoxLayout : public BoxLayout {
+public:
+    explicit HBoxLayout(int spacing = 0, Insets margins = {}) : BoxLayout(Direction::Horizontal,spacing,margins) {}
+};
 }

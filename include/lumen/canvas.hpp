@@ -15,9 +15,13 @@ public:
     void fill_rect(Rect rect, Color color);
     void stroke_rect(Rect rect, Color color, int thickness = 1);
     void draw_text(Point origin, std::string_view text, Color color, int scale = 1);
+    void push_clip(Rect rect);
+    void pop_clip() noexcept;
+    [[nodiscard]] Rect clip() const noexcept { return clips_.back(); }
 private:
     void put_pixel(int x, int y, Color color);
     Size size_;
     std::vector<std::uint8_t> pixels_;
+    std::vector<Rect> clips_;
 };
 }

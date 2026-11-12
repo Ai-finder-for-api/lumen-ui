@@ -10,11 +10,13 @@ add_library(lumen
     src/canvas.cpp
 )
 add_library(Lumen::Lumen ALIAS lumen)
+find_package(Threads REQUIRED)
+target_link_libraries(lumen PUBLIC Threads::Threads)
 target_compile_features(lumen PUBLIC cxx_std_20)
 target_include_directories(lumen PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
-set_target_properties(lumen PROPERTIES CXX_EXTENSIONS OFF)
+set_target_properties(lumen PROPERTIES CXX_EXTENSIONS OFF EXPORT_NAME Lumen)
 if(MSVC)
   target_compile_options(lumen PRIVATE /W4 /permissive-)
 else()
@@ -34,6 +36,14 @@ if(LUMEN_BUILD_EXAMPLES)
 endif()
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+configure_package_config_file(cmake/LumenConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/LumenConfig.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Lumen)
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/LumenConfigVersion.cmake
+  VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
 install(TARGETS lumen EXPORT LumenTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT LumenTargets NAMESPACE Lumen:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Lumen)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/LumenConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/LumenConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Lumen)

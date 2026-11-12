@@ -1,6 +1,7 @@
 #pragma once
 #include "lumen/canvas.hpp"
 #include "lumen/geometry.hpp"
+#include "lumen/event.hpp"
 #include "lumen/layout.hpp"
 #include "lumen/signal.hpp"
 #include <memory>
@@ -12,7 +13,7 @@
 namespace lumen {
 class Widget {
 public:
-    explicit Widget(Widget* parent = nullptr);
+    Widget() = default;
     virtual ~Widget() = default;
     Widget(const Widget&) = delete;
     Widget& operator=(const Widget&) = delete;
@@ -37,6 +38,11 @@ public:
     [[nodiscard]] bool is_visible() const noexcept { return visible_; }
     void set_enabled(bool value) noexcept { enabled_ = value; }
     [[nodiscard]] bool is_enabled() const noexcept { return enabled_; }
+    void set_focusable(bool value) noexcept { focusable_=value; if(!value) focused_=false; }
+    [[nodiscard]] bool is_focusable() const noexcept { return focusable_; }
+    [[nodiscard]] bool has_focus() const noexcept { return focused_; }
+    bool set_focus();
+    bool dispatch_key(const KeyEvent& event);
     void set_background(Color color) noexcept { background_ = color; }
     [[nodiscard]] Color background() const noexcept { return background_; }
     void set_layout(std::unique_ptr<Layout> layout);
@@ -49,6 +55,7 @@ protected:
     virtual void paint(Canvas& canvas, Point origin);
     virtual bool mouse_press(Point local) { (void)local; return false; }
     virtual bool mouse_release(Point local) { (void)local; return false; }
+    virtual bool key_press(const KeyEvent& event) { (void)event; return false; }
 private:
     friend class BoxLayout;
     Widget* parent_{nullptr};
@@ -56,11 +63,13 @@ private:
     std::unique_ptr<Layout> layout_;
     Rect geometry_{};
     Color background_{transparent};
-    bool visible_{true}, enabled_{true};
+    bool visible_{true}, enabled_{true}, focusable_{false}, focused_{false};
+    void clear_focus_recursive();
+    Widget* focused_descendant() noexcept;
 };
 class Label : public Widget {
 public:
-    explicit Label(std::string text = {}, Widget* parent = nullptr) : Widget(parent), text_(std::move(text)) {}
+    explicit Label(std::string text = {}) : text_(std::move(text)) {}
     void set_text(std::string text) { text_=std::move(text); }
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
     void set_color(Color color) noexcept { color_=color; }
@@ -75,7 +84,7 @@ private:
 };
 class Button : public Widget {
 public:
-    explicit Button(std::string text = {}, Widget* parent = nullptr) : Widget(parent), text_(std::move(text)) {}
+    explicit Button(std::string text = {}) : text_(std::move(text)) { set_focusable(true); }
     Signal<> clicked;
     void set_text(std::string text) { text_=std::move(text); }
     [[nodiscard]] const std::string& text() const noexcept { return text_; }
@@ -84,13 +93,14 @@ protected:
     void paint(Canvas& canvas, Point origin) override;
     bool mouse_press(Point local) override;
     bool mouse_release(Point local) override;
+    bool key_press(const KeyEvent& event) override;
 private:
     std::string text_;
     bool pressed_{false};
 };
 class CheckBox : public Widget {
 public:
-    explicit CheckBox(std::string text = {}, Widget* parent = nullptr) : Widget(parent), text_(std::move(text)) {}
+    explicit CheckBox(std::string text = {}) : text_(std::move(text)) { set_focusable(true); }
     Signal<bool> toggled;
     void set_checked(bool value);
     [[nodiscard]] bool is_checked() const noexcept { return checked_; }
@@ -98,13 +108,14 @@ public:
 protected:
     void paint(Canvas& canvas, Point origin) override;
     bool mouse_press(Point local) override;
+    bool key_press(const KeyEvent& event) override;
 private:
     std::string text_;
     bool checked_{false};
 };
 class Slider : public Widget {
 public:
-    explicit Slider(Widget* parent = nullptr) : Widget(parent) {}
+    Slider() = default;
     Signal<int> value_changed;
     void set_range(int minimum, int maximum);
     void set_value(int value);
@@ -117,9 +128,28 @@ private:
     int minimum_{0}, maximum_{100}, value_{0};
     void set_from_x(int x);
 };
+class LineEdit : public Widget {
+public:
+    explicit LineEdit(std::string text = {});
+    Signal<const std::string&> text_changed;
+    Signal<> editing_finished;
+    void set_text(std::string text);
+    [[nodiscard]] const std::string& text() const noexcept { return text_; }
+    void set_placeholder(std::string text) { placeholder_=std::move(text); }
+    [[nodiscard]] std::size_t cursor_position() const noexcept { return cursor_; }
+    [[nodiscard]] Size size_hint() const noexcept override { return {180,32}; }
+protected:
+    void paint(Canvas& canvas,Point origin) override;
+    bool mouse_press(Point local) override;
+    bool key_press(const KeyEvent& event) override;
+private:
+    std::string text_, placeholder_;
+    std::size_t cursor_{0};
+    void set_cursor_from_x(int x);
+};
 class ProgressBar : public Widget {
 public:
-    explicit ProgressBar(Widget* parent = nullptr) : Widget(parent) {}
+    ProgressBar() = default;
     void set_range(int minimum, int maximum);
     void set_value(int value) noexcept;
     [[nodiscard]] int value() const noexcept { return value_; }

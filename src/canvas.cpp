@@ -6,7 +6,10 @@
 namespace lumen {
 Canvas::Canvas(Size size, Color clear_color) : size_(size) {
     if (size.width < 0 || size.height < 0) throw std::invalid_argument("Canvas dimensions cannot be negative");
-    pixels_.resize(static_cast<std::size_t>(size.width) * static_cast<std::size_t>(size.height) * 4);
+    const auto w=static_cast<std::size_t>(size.width), h=static_cast<std::size_t>(size.height);
+    if(h && w>pixels_.max_size()/h/4) throw std::length_error("Canvas dimensions are too large");
+    pixels_.resize(w*h*4);
+    clips_.push_back({0,0,size.width,size.height});
     clear(clear_color);
 }
 void Canvas::clear(Color c) {
@@ -29,9 +32,28 @@ void Canvas::put_pixel(int x,int y,Color c) {
     pixels_[i+2]=static_cast<std::uint8_t>((c.b*a+pixels_[i+2]*da*inv/255)/out_a);
     pixels_[i+3]=static_cast<std::uint8_t>(out_a);
 }
+void Canvas::push_clip(Rect r) {
+    const auto parent=clips_.back();
+    const long long left=std::max<long long>(parent.x,r.x), top=std::max<long long>(parent.y,r.y);
+    const long long right=std::min(static_cast<long long>(parent.x)+parent.width,static_cast<long long>(r.x)+std::max(0,r.width));
+    const long long bottom=std::min(static_cast<long long>(parent.y)+parent.height,static_cast<long long>(r.y)+std::max(0,r.height));
+    const int x0=static_cast<int>(std::clamp(left,0LL,static_cast<long long>(size_.width)));
+    const int y0=static_cast<int>(std::clamp(top,0LL,static_cast<long long>(size_.height)));
+    const int x1=static_cast<int>(std::clamp(right,static_cast<long long>(x0),static_cast<long long>(size_.width)));
+    const int y1=static_cast<int>(std::clamp(bottom,static_cast<long long>(y0),static_cast<long long>(size_.height)));
+    clips_.push_back({x0,y0,x1-x0,y1-y0});
+}
+void Canvas::pop_clip() noexcept { if(clips_.size()>1) clips_.pop_back(); }
 void Canvas::fill_rect(Rect r,Color c) {
-    const int x0=std::max(0,r.x), y0=std::max(0,r.y);
-    const int x1=std::min(size_.width,r.x+std::max(0,r.width)), y1=std::min(size_.height,r.y+std::max(0,r.height));
+    if(r.width<=0 || r.height<=0) return;
+    const auto clip=clips_.back();
+    const long long left=std::max<long long>(clip.x,r.x), top=std::max<long long>(clip.y,r.y);
+    const long long right=std::min(static_cast<long long>(clip.x)+clip.width,static_cast<long long>(r.x)+r.width);
+    const long long bottom=std::min(static_cast<long long>(clip.y)+clip.height,static_cast<long long>(r.y)+r.height);
+    const int x0=static_cast<int>(std::clamp(left,0LL,static_cast<long long>(size_.width)));
+    const int y0=static_cast<int>(std::clamp(top,0LL,static_cast<long long>(size_.height)));
+    const int x1=static_cast<int>(std::clamp(right,static_cast<long long>(x0),static_cast<long long>(size_.width)));
+    const int y1=static_cast<int>(std::clamp(bottom,static_cast<long long>(y0),static_cast<long long>(size_.height)));
     for(int y=y0;y<y1;++y) for(int x=x0;x<x1;++x) put_pixel(x,y,c);
 }
 void Canvas::stroke_rect(Rect r,Color c,int t) {

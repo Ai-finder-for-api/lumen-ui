@@ -9,7 +9,7 @@ struct Insets { int left{0}, top{0}, right{0}, bottom{0}; };
 struct Rect {
     int x{0}, y{0}, width{0}, height{0};
     [[nodiscard]] constexpr bool contains(Point p) const noexcept {
-        return p.x >= x && p.y >= y && p.x < x + width && p.y < y + height;
+        return p.x >= x && p.y >= y && static_cast<long long>(p.x) < static_cast<long long>(x) + width && static_cast<long long>(p.y) < static_cast<long long>(y) + height;
     }
     [[nodiscard]] constexpr Size size() const noexcept { return {width, height}; }
     [[nodiscard]] constexpr bool empty() const noexcept { return width <= 0 || height <= 0; }

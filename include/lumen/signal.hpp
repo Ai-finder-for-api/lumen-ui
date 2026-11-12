@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <unordered_map>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -23,7 +23,7 @@ private:
 
 template<class... Args>
 class Signal {
-    struct State { std::size_t next{1}; std::unordered_map<std::size_t, std::function<void(Args...)>> slots; };
+    struct State { std::size_t next{1}; std::map<std::size_t, std::function<void(Args...)>> slots; };
 public:
     Signal() : state_(std::make_shared<State>()) {}
     template<class F> Connection connect(F&& callback) {
